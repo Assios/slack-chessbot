@@ -5,25 +5,48 @@ import time
 from slackclient import SlackClient
 import chess
 import random
+import urllib
 from keys import SLACK_ID, BOT_ID, BOT_NAME
 
 slack_client = SlackClient(SLACK_ID)
 AT_BOT = "<@" + BOT_ID + ">"
 games = {}
 results = {}
+config = {}
 
-def handle_move(user_move, user):
+def get_board_image(fen):
+    fen = urllib.quote(fen.encode("utf-8"))
+    return 'http://webchess.freehostia.com/diag/chessdiag.php?fen=%s&size=large&coord=yes&cap=yes&stm=yes&fb=no&theme=classic&format=auto&color1=E3CEAA&color2=635147&color3=000000&.png' % fen
+
+def handle_move(user_move, user, show_board=True):
     try:
         current_game = games[user]
     except:
         return ("Du spiller ikke mot meg, %s!" % user)
     current_game.push_san(user_move)
 
-    if current_game.is_game_over():
+    if current_game.is_insufficient_material():
+        games.pop(user, None)
+        results[user]["draw"] += 1
+        return ("Ikke nok materiell. Remis!")
+    elif current_game.is_stalemate():
+        results[user]["draw"] += 1
+        games.pop(user, None)
+        return ("Patt!")
+    elif current_game.is_game_over():
         games.pop(user, None)
         results[user]["win"] += 1
         return ("Sjakk matt, gratulerer!")
-    elif current_game.is_insufficient_material():
+
+    computer_move = random.choice([move for move in current_game.legal_moves])
+    if show_board:
+        current_game.push(computer_move)
+        response = get_board_image(current_game.fen())
+    else:
+        response = current_game.variation_san([chess.Move.from_uci(m) for m in [str(computer_move)]])
+        current_game.push(computer_move)
+
+    if current_game.is_insufficient_material():
         games.pop(user, None)
         results[user]["draw"] += 1
         return ("Ikke nok materiell. Remis!")
@@ -31,23 +54,10 @@ def handle_move(user_move, user):
         results[user]["draw"] += 1
         games.pop(user, None)
         return ("Patt!")
-
-    computer_move = random.choice([move for move in current_game.legal_moves])
-    response = current_game.variation_san([chess.Move.from_uci(m) for m in [str(computer_move)]])
-    current_game.push(computer_move)
-
-    if current_game.is_game_over():
+    elif current_game.is_game_over():
         games.pop(user, None)
         results[user]["loss"] += 1
         return ("Sjakk matt, jeg vant!")
-    elif current_game.is_insufficient_material():
-        games.pop(user, None)
-        results[user]["draw"] += 1
-        return ("Ikke nok materiell. Remis!")
-    elif current_game.is_stalemate():
-        results[user]["draw"] += 1
-        games.pop(user, None)
-        return ("Patt!")
 
     return response
 
@@ -71,8 +81,7 @@ def handle_command(command, channel, user):
         response = "Kommandoer: "
     elif command.startswith("vis"):
         board = games[user]
-        print(board)
-        response = board
+        response = get_board_image(board.fen())
     elif command.startswith("result"):
         if user in results.keys():
             response = "%s har vunnet %s, spilt %s remis og tapt %s partier mot meg." % (user, results[user]["win"], results[user]["draw"], results[user]["loss"])
