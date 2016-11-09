@@ -10,12 +10,41 @@ import urllib
 import chess.uci
 from keys import SLACK_ID, BOT_ID, BOT_NAME
 import inspect
+import re
 
 slack_client = SlackClient(SLACK_ID)
 AT_BOT = "<@" + BOT_ID + ">"
 games = {}
 results = {}
 stockfish = chess.uci.popen_engine("./stockfish-8-64")
+
+
+def replace_moves(string):
+    moves = {
+        "0-0": "O-O",
+        "kort rokade": "O-O",
+        "0-0-0": "O-O-O",
+        "lang rokade": "O-O-O",
+        "S": "N",
+        "L": "B",
+        "T": "R",
+        "D": "Q"
+    }
+
+    for k in moves:
+        string = re.sub(k, moves[k], string)
+    return string
+
+def get_ids_and_usernames():
+    get_users = slack_client.api_call("users.list")
+    users = get_users.get('members')
+
+    slack_users = {}
+
+    for user in users:
+        slack_users[user["id"]] = user["name"]
+
+    return slack_users
 
 def get_computer_move(board, level):
     stockfish.position(board)
@@ -41,6 +70,9 @@ def get_board_image(fen):
     return 'http://webchess.freehostia.com/diag/chessdiag.php?fen=%s&size=large&coord=yes&cap=yes&stm=yes&fb=no&theme=classic&format=auto&color1=E3CEAA&color2=635147&color3=000000&.png' % fen
 
 def handle_move(user_move, user, show_board=True):
+
+    user_move = replace_moves(user_move)
+
     try:
         current_game = games[user]
     except:
@@ -113,20 +145,23 @@ def handle_command(command, channel, user):
                 results[user]["draw"] = 0
                 results[user]["loss"] = 0
 
-            response = "Starter sjakkparti med %s, level %s av 5!" % (user, level)
+            response = "Starter sjakkparti med %s, level %s av 5!" % (users[user], level)
     elif command.startswith("hjelp"):
         response = "Kommandoer: "
     elif command.startswith("vis"):
-        board = games[user]
-        response = get_board_image(board.fen())
-    elif command.startswith("resign") or command.startswith("gir opp"):
+        if user in games:
+            board = games[user]
+            response = get_board_image(board.fen())
+        else:
+            response = "Vi spiller ikke!"
+    elif "resign" in command or "gir opp" in command:
         games.pop(user, None)
         games.pop(user + "_level", None)
         results[user]["loss"] += 1
         response = "Greit, n00b"
     elif command.startswith("result"):
         if user in results.keys():
-            response = "%s har vunnet %s, spilt %s remis og tapt %s partier mot meg." % (user, results[user]["win"], results[user]["draw"], results[user]["loss"])
+            response = "%s har vunnet %s, spilt %s remis og tapt %s partier mot meg." % (users[user], results[user]["win"], results[user]["draw"], results[user]["loss"])
         else:
             response = "%s har ikke spilt ferdig noen partier mot meg." % user
     else:
@@ -149,8 +184,8 @@ def parse_slack(slack_rtm_output):
 
 
 if __name__ == "__main__":
-    #get_users = slack_client.api_call("users.list")
-    #users = get_users.get('members')
+
+    users = get_ids_and_usernames()
 
     if slack_client.rtm_connect():
         print("Sjakkbot!")
