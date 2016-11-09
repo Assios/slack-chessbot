@@ -4,8 +4,10 @@
 import time
 from slackclient import SlackClient
 import chess
+import chess.uci
 import random
 import urllib
+import chess.uci
 from keys import SLACK_ID, BOT_ID, BOT_NAME
 
 slack_client = SlackClient(SLACK_ID)
@@ -13,6 +15,14 @@ AT_BOT = "<@" + BOT_ID + ">"
 games = {}
 results = {}
 config = {}
+stockfish = chess.uci.popen_engine("./stockfish-8-64")
+
+def get_computer_move(board, level):
+    if level == 0:
+        return random.choice([move for move in board.legal_moves])
+    elif level == 1:
+        stockfish.position(board)
+        return stockfish.go(movetime=100)[0]
 
 def get_board_image(fen):
     fen = urllib.quote(fen.encode("utf-8"))
@@ -38,7 +48,7 @@ def handle_move(user_move, user, show_board=True):
         results[user]["win"] += 1
         return ("Sjakk matt, gratulerer!")
 
-    computer_move = random.choice([move for move in current_game.legal_moves])
+    computer_move = get_computer_move(current_game, level=1)
     if show_board:
         current_game.push(computer_move)
         response = get_board_image(current_game.fen())
