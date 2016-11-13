@@ -5,20 +5,30 @@ import time
 from slackclient import SlackClient
 import chess
 import chess.uci
-import random
 from datetime import datetime
 import urllib
 import chess.uci
 from keys import SLACK_ID, BOT_ID, BOT_NAME
-import inspect
 import re
+import json
+
+def save():
+    json.dump(results, open("results.json", "w"))
+
+def load_results():
+    try:
+        with open('results.json', 'r')as f:
+            results = json.load(f)
+    except IOError:
+        results = {}
+
+    return results
 
 slack_client = SlackClient(SLACK_ID)
 AT_BOT = "<@" + BOT_ID + ">"
 games = {}
-results = {}
+results = load_results()
 stockfish = chess.uci.popen_engine("./stockfish-8-64")
-
 
 def replace_moves(string):
     moves = {
@@ -69,7 +79,7 @@ def get_computer_move(board, level):
 def get_board_image(fen):
     fen = urllib.quote(fen.encode("utf-8"))
     t = datetime.now().microsecond
-    return 'http://webchess.freehostia.com/diag/chessdiag.php?fen=%s&size=large&coord=yes&cap=yes&stm=yes&fb=no&theme=classic&format=auto&color1=E3CEAA&color2=635147&color3=000000&t=%s.png' % (fen, t)
+    return 'http://webchess.freehostia.com/diag/chessdiag.php?fen=%s&size=large&coord=yes&cap=yes&stm=yes&fb=no&theme=smart&format=png&color1=ffffff&color2=fd5158&color3=000000t=%s.png' % (fen, t)
 
 def handle_move(user_move, user, show_board=True):
 
@@ -147,20 +157,28 @@ def handle_command(command, channel, user):
                 results[user]["draw"] = 0
                 results[user]["loss"] = 0
 
-            response = "Starter sjakkparti med %s, level %s av 5!" % (users[user], level)
+            response = "Starter sjakkparti med %s, vanskelighetsgrad %s av 5!\n\n%s\n\nDin tur!" % (users[user], level, get_board_image(games[user].fen()))
     elif command.startswith("hjelp"):
-        response = "Kommandoer: "
-    elif command.startswith("vis"):
+        response = "Kommandoer: \n\n*start [1-5]* — _start et parti med vanskelighetsgrad 1-5 (1 er default)_" \
+                   "            \n*Nf3* — _flytt en springer til f3 (se https://en.wikipedia.org/wiki/Algebraic_notation_(chess)#Notation_for_moves)_" \
+                   "            \n*resign* — _gi opp_" \
+                   "            \n*vis* — _vis brett_" \
+                   "            \n*score* — _vis dine resultater mot meg_" \
+                   "            \n*elo* — _vis ratingen din_" \
+                   "            \n*elo alle — _vis ratingen til alle_* "
+
+    elif command.startswith("vis") or command.startswith("show"):
         if user in games:
             board = games[user]
             response = get_board_image(board.fen())
         else:
             response = "Vi spiller ikke!"
     elif "resign" in command or "gir opp" in command:
+        board = get_board_image(games[user].fen())
         games.pop(user, None)
         games.pop(user + "_level", None)
         results[user]["loss"] += 1
-        response = "Greit, n00b"
+        response = "Greit, n00b\n\n%s" % board
     elif command.startswith("result"):
         if user in results.keys():
             response = "%s har vunnet %s, spilt %s remis og tapt %s partier mot meg." % (users[user], results[user]["win"], results[user]["draw"], results[user]["loss"])
@@ -184,7 +202,6 @@ def parse_slack(slack_rtm_output):
                 return message['text'].split(AT_BOT)[1].strip(), message['channel'], message['user']
     return None, None, None
 
-
 if __name__ == "__main__":
 
     users = get_ids_and_usernames()
@@ -197,5 +214,6 @@ if __name__ == "__main__":
             if command and channel:
                 handle_command(command, channel, user)
             time.sleep(0.5)
+            save()
     else:
         print("Connection failed.")
