@@ -6,6 +6,7 @@ from slackclient import SlackClient
 import chess
 import chess.uci
 import random
+from datetime import datetime
 import urllib
 import chess.uci
 from keys import SLACK_ID, BOT_ID, BOT_NAME
@@ -67,7 +68,8 @@ def get_computer_move(board, level):
 
 def get_board_image(fen):
     fen = urllib.quote(fen.encode("utf-8"))
-    return 'http://webchess.freehostia.com/diag/chessdiag.php?fen=%s&size=large&coord=yes&cap=yes&stm=yes&fb=no&theme=classic&format=auto&color1=E3CEAA&color2=635147&color3=000000&.png' % fen
+    t = datetime.now().microsecond
+    return 'http://webchess.freehostia.com/diag/chessdiag.php?fen=%s&size=large&coord=yes&cap=yes&stm=yes&fb=no&theme=classic&format=auto&color1=E3CEAA&color2=635147&color3=000000&t=%s.png' % (fen, t)
 
 def handle_move(user_move, user, show_board=True):
 
