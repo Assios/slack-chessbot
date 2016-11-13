@@ -88,7 +88,7 @@ def reply(command, channel, user):
                    "            \n*vis* — _vis brett_" \
                    "            \n*score* — _vis dine resultater mot meg_" \
                    "            \n*rating* — _vis ratingen din_" \
-                   "            \n*ratingliste — _vis ratingliste* "
+                   "            \n*ratingliste* — _vis ratingliste_ "
 
     elif command.startswith("vis") or command.startswith("show"):
         if user in games:
