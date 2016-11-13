@@ -7,10 +7,11 @@ import re
 import urllib
 import datetime
 from datetime import datetime
+import math
 
 stockfish = chess.uci.popen_engine("./stockfish-8-64")
 
-def handle_move(games, results, user_move, user, show_board=True):
+def handle_move(games, results, ratings, user_move, user, show_board=True):
     user_move = replace_moves(user_move)
 
     try:
@@ -19,45 +20,61 @@ def handle_move(games, results, user_move, user, show_board=True):
         return ("Du spiller ikke mot meg, %s!" % user)
     current_game.push_san(user_move)
 
+    board_image = get_board_image(games[user].fen())
+
     if current_game.is_insufficient_material():
+        level = str(games[user + "_level"])
+        ratings[user], ratings[level] = calculate_new_ratings(ratings[user], ratings[level], 0.5)
         games.pop(user, None)
         games.pop(user + "_level", None)
         results[user]["draw"] += 1
-        return ("Ikke nok materiell. Remis!")
+        return "%s\n\nIkke nok materiell. Remis! Din nye rating er %s og sjakkbot-level-%s sin nye rating er %s" % (board_image, ratings[user], level, ratings[level])
     elif current_game.is_stalemate():
-        results[user]["draw"] += 1
+        level = str(games[user + "_level"])
+        ratings[user], ratings[level] = calculate_new_ratings(ratings[user], ratings[level], 0.5)
         games.pop(user, None)
         games.pop(user + "_level", None)
-        return ("Patt!")
+        results[user]["draw"] += 1
+        return "%s\n\nPatt! Din nye rating er %s og sjakkbot-level-%s sin nye rating er %s" % (board_image, ratings[user], level, ratings[level])
     elif current_game.is_game_over():
+        level = str(games[user + "_level"])
+        ratings[user], ratings[level] = calculate_new_ratings(ratings[user], ratings[level], 1)
         games.pop(user, None)
         games.pop(user + "_level", None)
         results[user]["win"] += 1
-        return ("Sjakk matt, gratulerer!")
+        return "Sjakk matt, gratulerer! Din nye rating er %s og sjakkbot-level-%s sin nye rating er %s" % (board_image, ratings[user], level, ratings[level])
 
     computer_move = get_computer_move(current_game, level=games[user + "_level"])
+
     if show_board:
+        m = current_game.variation_san([chess.Move.from_uci(m) for m in [str(computer_move)]])
         current_game.push(computer_move)
-        response = get_board_image(current_game.fen())
+        response = "%s\n\n%s" % (m, get_board_image(current_game.fen()))
     else:
         response = current_game.variation_san([chess.Move.from_uci(m) for m in [str(computer_move)]])
         current_game.push(computer_move)
 
     if current_game.is_insufficient_material():
+        level = str(games[user + "_level"])
+        ratings[user], ratings[level] = calculate_new_ratings(ratings[user], ratings[level], 0.5)
         games.pop(user, None)
         games.pop(user + "_level", None)
         results[user]["draw"] += 1
-        return ("Ikke nok materiell. Remis!")
+        return "%s\n\nIkke nok materiell. Remis! Din nye rating er %s og sjakkbot-level-%s sin nye rating er %s" % (board_image, ratings[user], level, ratings[level])
     elif current_game.is_stalemate():
+        level = str(games[user + "_level"])
+        ratings[user], ratings[level] = calculate_new_ratings(ratings[user], ratings[level], 0.5)
         results[user]["draw"] += 1
         games.pop(user, None)
         games.pop(user + "_level", None)
-        return ("Patt!")
+        return "%s\n\nPatt! Din nye rating er %s og sjakkbot-level-%s sin nye rating er %s" % (board_image, ratings[user], level, ratings[level])
     elif current_game.is_game_over():
+        level = str(games[user + "_level"])
+        ratings[user], ratings[level] = calculate_new_ratings(ratings[user], ratings[level], 0)
         games.pop(user, None)
         games.pop(user + "_level", None)
         results[user]["loss"] += 1
-        return ("Sjakk matt, jeg vant!")
+        return "Sjakk matt, du tapte! Din nye rating er %s og sjakkbot-level-%s sin nye rating er %s" % (board_image, ratings[user], level, ratings[level])
 
     return response
 
@@ -100,3 +117,11 @@ def get_computer_move(board, level):
     elif level == 5:
         stockfish.setoption({"Skill Level": 20})
         return stockfish.go(movetime=400, depth=12)[0]
+
+def calculate_new_ratings(rating_a, rating_b, score_a, k=20):
+    e_a = 1 / 1 + math.pow(10, (rating_b - rating_a) / 400)
+    e_b = 1 - e_a
+    new_rating_a = rating_a + k * (score_a - e_a)
+    score_b = 1.0 - score_a
+    new_rating_b = rating_b + k * (score_b - e_b)
+    return int(new_rating_a), int(new_rating_b)
