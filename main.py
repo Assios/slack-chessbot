@@ -120,12 +120,12 @@ def reply(command, channel, user):
                 username = users[user]
             except:
                 username = "sjakkbot-level-%s" % user
-            response += "*%s*: %s\n" % (username, rating)
+            response += "*%s*: %s\n" % (username, int(rating))
     elif "elo" in command or "rating" in command:
         if not user in ratings.keys():
             response = "Vi har ikke spilt noen partier ennå, men du starter med 1200 i rating."
         else:
-            response = "%s har %s i rating!" % (users[user], ratings[user])
+            response = "%s har %s i rating!" % (users[user], int(ratings[user]))
     elif "stilling" in command:
         game = games[user]
         response = get_evaluation(game)

@@ -42,7 +42,7 @@ def handle_move(games, results, ratings, user_move, user, show_board=True):
         games.pop(user, None)
         games.pop(user + "_level", None)
         results[user]["win"] += 1
-        return "Sjakk matt, gratulerer! Din nye rating er %s og sjakkbot-level-%s sin nye rating er %s" % (board_image, ratings[user], level, ratings[level])
+        return "%s\n\nSjakk matt, gratulerer! Din nye rating er %s og sjakkbot-level-%s sin nye rating er %s" % (board_image, ratings[user], level, ratings[level])
 
     computer_move = get_computer_move(current_game, level=games[user + "_level"])
 
@@ -74,7 +74,7 @@ def handle_move(games, results, ratings, user_move, user, show_board=True):
         games.pop(user, None)
         games.pop(user + "_level", None)
         results[user]["loss"] += 1
-        return "Sjakk matt, du tapte! Din nye rating er %s og sjakkbot-level-%s sin nye rating er %s" % (board_image, ratings[user], level, ratings[level])
+        return "%s\n\nSjakk matt, du tapte! Din nye rating er %s og sjakkbot-level-%s sin nye rating er %s" % (board_image, ratings[user], level, ratings[level])
 
     return response
 
@@ -104,15 +104,25 @@ def get_evaluation(board):
     stockfish.info_handlers.append(info_handler)
     stockfish.position(board)
     stockfish.go(movetime=400)
-    cp = float(info_handler.info["score"][1].cp)
+    score = info_handler.info["score"][1]
 
-    prefix = "Du"
-    if cp < 0:
-        prefix = "Jeg"
+    if score.mate:
+        if score.mate < 0:
+            score.mate = abs(score.mate)
+            prefix = "Jeg"
+        else:
+            prefix = "Du"
+        return "%s har matt i %s!!" % (prefix, score.mate)
+    else:
+        cp = float(score.cp)
 
-    p = abs(cp) / 100
+        prefix = "Du"
+        if cp < 0:
+            prefix = "Jeg"
 
-    return "%s har en fordel på %s bønder." % (prefix, p)
+        p = abs(cp) / 100
+
+        return "%s har en fordel på %s bønder." % (prefix, p)
 
 
 def get_computer_move(board, level):
@@ -134,19 +144,21 @@ def get_computer_move(board, level):
         stockfish.setoption({"Skill Level": 20})
         return stockfish.go(movetime=400, depth=12)[0]
 
-def calculate_new_ratings(rating_a, rating_b, score_a, k=20):
-    """
-    Calculate new ratings using the Elo system.
+def get_k_factor(rating):
+    if rating < 2100:
+        return 32
+    elif rating < 2400:
+        return 24
+    else:
+        return 16
 
-    :param rating_a: Player a's rating
-    :param rating_b: Player b's rating
-    :param score_a: Player a's score (win = 1, draw = 0.5, loss = 0)
-    :param k: k value
-    :return: Player a's and b's new ratings
-    """
-    e_a = 1 / 1 + math.pow(10, (rating_b - rating_a) / 400)
+
+def calculate_new_ratings(rating_a, rating_b, score_a):
+    e_a = 1 / (1 + math.pow(10, (rating_b - rating_a) / 400.))
     e_b = 1 - e_a
-    new_rating_a = rating_a + k * (score_a - e_a)
+    a_k = get_k_factor(rating_a)
+    b_k = get_k_factor(rating_b)
+    new_rating_a = rating_a + a_k * (score_a - e_a)
     score_b = 1.0 - score_a
-    new_rating_b = rating_b + k * (score_b - e_b)
-    return int(new_rating_a), int(new_rating_b)
+    new_rating_b = rating_b + b_k * (score_b - e_b)
+    return new_rating_a, new_rating_b
