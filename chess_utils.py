@@ -99,6 +99,22 @@ def replace_moves(string):
         string = re.sub(k, moves[k], string)
     return string
 
+def get_evaluation(board):
+    info_handler = chess.uci.InfoHandler()
+    stockfish.info_handlers.append(info_handler)
+    stockfish.position(board)
+    stockfish.go(movetime=400)
+    cp = float(info_handler.info["score"][1].cp)
+
+    prefix = "Du"
+    if cp < 0:
+        prefix = "Jeg"
+
+    p = abs(cp) / 100
+
+    return "%s har en fordel på %s bønder." % (prefix, p)
+
+
 def get_computer_move(board, level):
     stockfish.position(board)
 
@@ -119,6 +135,15 @@ def get_computer_move(board, level):
         return stockfish.go(movetime=400, depth=12)[0]
 
 def calculate_new_ratings(rating_a, rating_b, score_a, k=20):
+    """
+    Calculate new ratings using the Elo system.
+
+    :param rating_a: Player a's rating
+    :param rating_b: Player b's rating
+    :param score_a: Player a's score (win = 1, draw = 0.5, loss = 0)
+    :param k: k value
+    :return: Player a's and b's new ratings
+    """
     e_a = 1 / 1 + math.pow(10, (rating_b - rating_a) / 400)
     e_b = 1 - e_a
     new_rating_a = rating_a + k * (score_a - e_a)

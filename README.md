@@ -1,23 +1,39 @@
-# slack-chessbot
+# slack-sjakkbot
 
 ### Commands
 
 #### sjakkbot start [1-5]
 
-Start a game with a level from 1 to 5 (1 is default if no level is chosen).
+Start et parti med vanskelighetsgrad 1-5 (1 er default).
 
 #### sjakkbot Nf3
 
-Move a knight to f3 (see https://en.wikipedia.org/wiki/Algebraic_notation_(chess)#Notation_for_moves if you don't know algebraic notation).
+Flytt en springer til f3 (se https://en.wikipedia.org/wiki/Algebraic_notation_(chess)#Notation_for_moves).
 
 #### sjakkbot resign
 
-Resign.
+Gi opp.
 
-#### sjakkbot help
+#### sjakkbot vis
 
-Get help.
+Vis brett.
 
 #### sjakkbot result
 
-Get your scores against the bot.
+Vis dine resultater mot boten.
+
+#### sjakkbot rating
+
+Vis ratingen din.
+
+#### sjakkbot ratingliste
+
+Vis ratingliste.
+
+#### sjakkbot stilling
+
+Vis hvem som står best.
+
+#### sjakkbot hjelp
+
+Vis kommandoer.

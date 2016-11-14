@@ -88,7 +88,8 @@ def reply(command, channel, user):
                    "            \n*vis* — _vis brett_" \
                    "            \n*score* — _vis dine resultater mot meg_" \
                    "            \n*rating* — _vis ratingen din_" \
-                   "            \n*ratingliste* — _vis ratingliste_ "
+                   "            \n*ratingliste* — _vis ratingliste_ " \
+                   "            \n*stilling* — _vis hvem som står best_ "
 
     elif command.startswith("vis") or command.startswith("show"):
         if user in games:
@@ -125,6 +126,11 @@ def reply(command, channel, user):
             response = "Vi har ikke spilt noen partier ennå, men du starter med 1200 i rating."
         else:
             response = "%s har %s i rating!" % (users[user], ratings[user])
+    elif "stilling" in command:
+        game = games[user]
+        response = get_evaluation(game)
+
+
     else:
         try:
             response = handle_move(games, results, ratings, command, user)
