@@ -28,21 +28,21 @@ def handle_move(games, results, ratings, user_move, user, show_board=True):
         games.pop(user, None)
         games.pop(user + "_level", None)
         results[user]["draw"] += 1
-        return "%s\n\nIkke nok materiell. Remis! Din nye rating er %s og sjakkbot-level-%s sin nye rating er %s" % (board_image, ratings[user], level, ratings[level])
+        return "%s\n\nIkke nok materiell. Remis! Din nye rating er %s og sjakkbot-level-%s sin nye rating er %s" % (board_image, int(ratings[user]), level, int(ratings[level]))
     elif current_game.is_stalemate():
         level = str(games[user + "_level"])
         ratings[user], ratings[level] = calculate_new_ratings(ratings[user], ratings[level], 0.5)
         games.pop(user, None)
         games.pop(user + "_level", None)
         results[user]["draw"] += 1
-        return "%s\n\nPatt! Din nye rating er %s og sjakkbot-level-%s sin nye rating er %s" % (board_image, ratings[user], level, ratings[level])
+        return "%s\n\nPatt! Din nye rating er %s og sjakkbot-level-%s sin nye rating er %s" % (board_image, int(ratings[user]), level, int(ratings[level]))
     elif current_game.is_game_over():
         level = str(games[user + "_level"])
         ratings[user], ratings[level] = calculate_new_ratings(ratings[user], ratings[level], 1)
         games.pop(user, None)
         games.pop(user + "_level", None)
         results[user]["win"] += 1
-        return "%s\n\nSjakk matt, gratulerer! Din nye rating er %s og sjakkbot-level-%s sin nye rating er %s" % (board_image, ratings[user], level, ratings[level])
+        return "%s\n\nSjakk matt, gratulerer! Din nye rating er %s og sjakkbot-level-%s sin nye rating er %s" % (board_image, int(ratings[user]), level, int(ratings[level]))
 
     computer_move = get_computer_move(current_game, level=games[user + "_level"])
 
@@ -60,21 +60,21 @@ def handle_move(games, results, ratings, user_move, user, show_board=True):
         games.pop(user, None)
         games.pop(user + "_level", None)
         results[user]["draw"] += 1
-        return "%s\n\nIkke nok materiell. Remis! Din nye rating er %s og sjakkbot-level-%s sin nye rating er %s" % (board_image, ratings[user], level, ratings[level])
+        return "%s\n\nIkke nok materiell. Remis! Din nye rating er %s og sjakkbot-level-%s sin nye rating er %s" % (board_image, int(ratings[user]), level, int(ratings[level]))
     elif current_game.is_stalemate():
         level = str(games[user + "_level"])
         ratings[user], ratings[level] = calculate_new_ratings(ratings[user], ratings[level], 0.5)
         results[user]["draw"] += 1
         games.pop(user, None)
         games.pop(user + "_level", None)
-        return "%s\n\nPatt! Din nye rating er %s og sjakkbot-level-%s sin nye rating er %s" % (board_image, ratings[user], level, ratings[level])
+        return "%s\n\nPatt! Din nye rating er %s og sjakkbot-level-%s sin nye rating er %s" % (board_image, int(ratings[user]), level, int(ratings[level]))
     elif current_game.is_game_over():
         level = str(games[user + "_level"])
         ratings[user], ratings[level] = calculate_new_ratings(ratings[user], ratings[level], 0)
         games.pop(user, None)
         games.pop(user + "_level", None)
         results[user]["loss"] += 1
-        return "%s\n\nSjakk matt, du tapte! Din nye rating er %s og sjakkbot-level-%s sin nye rating er %s" % (board_image, ratings[user], level, ratings[level])
+        return "%s\n\nSjakk matt, du tapte! Din nye rating er %s og sjakkbot-level-%s sin nye rating er %s" % (board_image, int(ratings[user]), level, int(ratings[level]))
 
     return response
 
@@ -151,7 +151,6 @@ def get_k_factor(rating):
         return 24
     else:
         return 16
-
 
 def calculate_new_ratings(rating_a, rating_b, score_a):
     e_a = 1 / (1 + math.pow(10, (rating_b - rating_a) / 400.))
